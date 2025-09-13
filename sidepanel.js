@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', async function() {
   const apiProviderSelect = document.getElementById('apiProvider');
   const saveSettingsButton = document.getElementById('saveSettings');
   const copyButton = document.getElementById('copyButton');
-  const closeButton = document.getElementById('closeButton');
   const tabButtons = document.querySelectorAll('.tab-button');
   const gherkinCheck = document.getElementById('gherkinCheck');
   const stepdefCheck = document.getElementById('stepdefCheck');
@@ -26,7 +25,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     apiProviderSelect,
     saveSettingsButton,
     copyButton,
-    closeButton,
     gherkinCheck,
     stepdefCheck,
     pomCheck,
@@ -73,21 +71,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     } catch (error) {
       console.error('Error saving settings:', error);
       alert('Failed to save settings: ' + error.message);
-    }
-  });
-
-  // Handle close button
-  closeButton.addEventListener('click', async function() {
-    try {
-      if (isInspecting) {
-        const tabs = await chrome.tabs.query({active: true, currentWindow: true});
-        if (tabs[0]) {
-          await chrome.tabs.sendMessage(tabs[0].id, {action: 'stopInspector'});
-        }
-      }
-      await chrome.sidePanel.close();
-    } catch (error) {
-      console.error('Error closing side panel:', error);
     }
   });
 
