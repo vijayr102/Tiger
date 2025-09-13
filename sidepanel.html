@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gherkin Generator</title>
+    <link href="styles.css" rel="stylesheet">
+    <link href="prism.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="tab-container">
+            <button class="tab-button active" data-tab="generator">Generator</button>
+            <button class="tab-button" data-tab="config">Settings</button>
+        </div>
+
+        <!-- Generator Tab -->
+        <div id="generatorTab" class="tab-content active">
+            <div class="action-buttons">
+                <button id="inspectButton" class="action-button">Start Element Inspector</button>
+            </div>
+
+            <div class="output-options">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="gherkinCheck" checked>
+                    <span class="checkbox-text">Gherkin</span>
+                </label>
+                <label class="checkbox-container">
+                    <input type="checkbox" id="stepdefCheck" checked>
+                    <span class="checkbox-text">Step Definitions</span>
+                </label>
+                <label class="checkbox-container">
+                    <input type="checkbox" id="pomCheck">
+                    <span class="checkbox-text">Page Object Model</span>
+                </label>
+            </div>
+
+            <div id="codeOutput" class="code-output active"></div>
+
+            <div class="action-buttons bottom">
+                <button id="generateButton" class="action-button" disabled>Generate Code</button>
+                <button id="copyButton" class="action-button">Copy to Clipboard</button>
+            </div>
+        </div>
+
+        <!-- Config Tab -->
+        <div id="configTab" class="tab-content">
+            <div class="config-form">
+                <div class="form-group">
+                    <label for="apiProvider">API Provider</label>
+                    <select id="apiProvider" class="input-field">
+                        <option value="openai">OpenAI</option>
+                        <option value="groq">Groq</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="apiKey">API Key</label>
+                    <input type="password" id="apiKey" class="input-field" placeholder="Enter API key">
+                </div>
+
+                <button id="saveSettings" class="action-button">Save Settings</button>
+            </div>
+        </div>
+    </div>
+    <script src="prism.js"></script>
+    <script src="sidepanel.js"></script>
+</body>
+</html>
