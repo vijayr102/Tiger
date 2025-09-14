@@ -43,7 +43,7 @@ Key extension logic:
 ## Example Feature (RedBus Search)
 Below is an example Gherkin feature that can be produced by the generator:
 
-Feature: RedBus Search Functionality
+```Feature: RedBus Search Functionality
   As a user, I want to be able to search for buses on the RedBus website.
 
 Scenario Outline: Search for buses with different source and destination
@@ -60,28 +60,9 @@ Examples:
   | Singapore  | Kuala Lumpur  | 2025-09-15  | 2025-09-20  |
   | Johor      | Malacca       | 2025-09-18  | 2025-09-22  |
   | Penang     | Ipoh          | 2025-09-25  |             |
-
-Scenario: Search for buses without return date
-  Given I am on the RedBus website
-  When I enter "Singapore" as the source
-  And I enter "Kuala Lumpur" as the destination
-  And I select "2025-09-15" as the onward date
-  And I do not select a return date
-  And I click the "SEARCH BUSES" button
-  Then I should see the search results
-
-Scenario: Search for buses with invalid source
-  Given I am on the RedBus website
-  When I enter "Invalid Source" as the source
-  And I enter "Kuala Lumpur" as the destination
-  And I select "2025-09-15" as the onward date
-  And I select "2025-09-20" as the return date
-  And I click the "SEARCH BUSES" button
-  Then I should see an error message
-
-// -------------------- JAVA STEP DEFINITIONS --------------------
-// (Example snippet — generator will return full classes)
-
+```
+## JAVA STEP DEFINITIONS
+```
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -138,14 +119,6 @@ public class RedBusSearchPage {
         dateElement.click();
     }
 
-    public void selectReturnDate(String date) {
-        wait.until(ExpectedConditions.visibilityOf(returnDateInput));
-        returnDateInput.click();
-        WebElement dateElement = driver.findElement(By.xpath("//div[@id='return_cal']//td[@data-date='" + date + "']"));
-        wait.until(ExpectedConditions.elementToBeClickable(dateElement));
-        dateElement.click();
-    }
-
     public void clickSearchBusesButton() {
         wait.until(ExpectedConditions.elementToBeClickable(searchBusesButton));
         searchBusesButton.click();
@@ -155,12 +128,7 @@ public class RedBusSearchPage {
         wait.until(ExpectedConditions.titleContains("Bus Tickets"));
         Assert.assertTrue(driver.getTitle().contains("Bus Tickets"));
     }
-
-    public void verifyErrorMessage() {
-        wait.until(ExpectedConditions.visibilityOf(errorMessage));
-        Assert.assertTrue(errorMessage.isDisplayed());
-    }
-}
+} ```
 
 ## Notes & Troubleshooting
 - If the inspector does not activate, try refreshing the page and re-trying the "Start Element Inspector" button.
