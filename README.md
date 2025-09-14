@@ -128,7 +128,8 @@ public class RedBusSearchPage {
         wait.until(ExpectedConditions.titleContains("Bus Tickets"));
         Assert.assertTrue(driver.getTitle().contains("Bus Tickets"));
     }
-} ```
+}
+ ```
 
 ## Notes & Troubleshooting
 - If the inspector does not activate, try refreshing the page and re-trying the "Start Element Inspector" button.
