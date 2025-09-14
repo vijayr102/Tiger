@@ -43,7 +43,8 @@ Key extension logic:
 ## Example Feature (RedBus Search)
 Below is an example Gherkin feature that can be produced by the generator:
 
-```Feature: RedBus Search Functionality
+```
+Feature: RedBus Search Functionality
   As a user, I want to be able to search for buses on the RedBus website.
 
 Scenario Outline: Search for buses with different source and destination
