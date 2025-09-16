@@ -256,171 +256,283 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     codeOutput.innerHTML = content;
   }
-});
 
-async function generateCode(elements, apiKey, apiProvider) {
-  let pageUrl = '';
-  try {
-    const tabs = await chrome.tabs.query({active: true, currentWindow: true});
-    pageUrl = tabs[0].url;
-  } catch (error) {
-    console.error('Failed to get page URL:', error);
-  }
-
-  const domContext = JSON.stringify(elements, null, 2);
-
-  const apiConfig = {
-    openai: {
-      url: 'https://api.openai.com/v1/chat/completions',
-      model: 'gpt-4',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      }
-    },
-    groq: {
-      url: 'https://api.groq.com/openai/v1/chat/completions',
-      model: 'llama-3.3-70b-versatile',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      }
-    }
-  };
-
-  const config = apiConfig[apiProvider];
-  if (!config) {
-    throw new Error('Invalid API provider selected');
-  }
-
-  try {
-    // Initial API call for Gherkin
-    let gherkin = '', stepDefinitions = '', pomCode = '';
-
-    if (gherkinCheck.checked) {
-      const gherkinPrompt = `Instructions:
-        Generate ONLY a Cucumber (.feature) file.
-        - Use Scenario Outline with Examples table
-        - Each step must be relevant to the provided DOM
-        - Do not combine multiple actions into one step
-        - Use realistic test data
-        - Include multiple scenarios if applicable
-
-        Context:
-        URL: ${pageUrl}
-        DOM: ${domContext}
-
-        Output Format: Only valid Gherkin in a \`\`\`gherkin\`\`\` block`;
-
-      const gherkinResponse = await fetch(config.url, {
-        method: 'POST',
-        headers: config.headers,
-        body: JSON.stringify({
-          model: config.model,
-          messages: [{
-            role: 'user',
-            content: gherkinPrompt
-          }],
-          temperature: 0.7
-        })
-      });
-
-      if (!gherkinResponse.ok) {
-        throw new Error(`Gherkin API failed: ${gherkinResponse.status} ${gherkinResponse.statusText}`);
-      }
-
-      const gherkinData = await gherkinResponse.json();
-      const gherkinMatch = gherkinData.choices[0].message.content.match(/```gherkin\n([\s\S]*?)```/);
-      gherkin = gherkinMatch ? gherkinMatch[1].trim() : '';
+  async function generateCode(elements, apiKey, apiProvider) {
+    let pageUrl = '';
+    try {
+      const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+      pageUrl = tabs[0].url;
+    } catch (error) {
+      console.error('Failed to get page URL:', error);
     }
 
-    // Generate step definitions if requested
-    if (stepdefCheck.checked && gherkin) {
-      const stepdefPrompt = `Instructions:
-        Generate Java step definitions for this Gherkin:
-        ${gherkin}
+    const domContext = JSON.stringify(elements, null, 2);
 
-        Requirements:
-        - Use Selenium WebDriver with PageFactory
-        - Include proper imports
-        - Add FindBy annotations
-        - Use explicit waits
-        - Add proper assertions
-        - Handle errors gracefully
-
-        Context:
-        URL: ${pageUrl}
-        DOM: ${domContext}
-
-        Output Format: Only Java code in a \`\`\`java\`\`\` block`;
-
-      const stepdefResponse = await fetch(config.url, {
-        method: 'POST',
-        headers: config.headers,
-        body: JSON.stringify({
-          model: config.model,
-          messages: [{
-            role: 'user',
-            content: stepdefPrompt
-          }],
-          temperature: 0.7
-        })
-      });
-
-      if (!stepdefResponse.ok) {
-        throw new Error(`Step Definition API failed: ${stepdefResponse.status}`);
+    const apiConfig = {
+      openai: {
+        url: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        }
+      },
+      groq: {
+        url: 'https://api.groq.com/openai/v1/chat/completions',
+        model: 'llama-3.3-70b-versatile',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        }
       }
-
-      const stepdefData = await stepdefResponse.json();
-      const javaMatch = stepdefData.choices[0].message.content.match(/```java\n([\s\S]*?)```/);
-      stepDefinitions = javaMatch ? javaMatch[1].trim() : '';
-    }
-
-    // Generate POM if requested
-    if (pomCheck.checked) {
-      const pomPrompt = `Instructions:
-        Generate a Selenium Java Page Object Model class.
-        - Add proper JavaDoc
-        - Use FindBy annotations
-        - Include meaningful method names
-        - Add proper waits
-        - Handle errors gracefully
-
-        Context:
-        URL: ${pageUrl}
-        DOM: ${domContext}
-
-        Output Format: Only Java code in a \`\`\`java\`\`\` block`;
-
-      const pomResponse = await fetch(config.url, {
-        method: 'POST',
-        headers: config.headers,
-        body: JSON.stringify({
-          model: config.model,
-          messages: [{
-            role: 'user',
-            content: pomPrompt
-          }],
-          temperature: 0.7
-        })
-      });
-
-      if (!pomResponse.ok) {
-        throw new Error(`POM API failed: ${pomResponse.status}`);
-      }
-
-      const pomData = await pomResponse.json();
-      const pomMatch = pomData.choices[0].message.content.match(/```java\n([\s\S]*?)```/);
-      pomCode = pomMatch ? pomMatch[1].trim() : '';
-    }
-
-    return {
-      gherkin,
-      stepDefinitions,
-      pom: pomCode
     };
-  } catch (error) {
-    console.error('API Error:', error);
-    throw error;
-  }
+
+    const config = apiConfig[apiProvider];
+    if (!config) {
+      throw new Error('Invalid API provider selected');
+    }
+
+    try {
+      let gherkin = '', stepDefinitions = '', pomCode = '';
+      const generateGherkin = gherkinCheck.checked;
+      const generateStepDefs = stepdefCheck.checked;
+      const generatePOM = pomCheck.checked;
+
+      // Generate Gherkin if requested
+      if (generateGherkin && !generateStepDefs) {
+        const gherkinPrompt = `
+Instructions:
+- Generate ONLY a Cucumber (.feature) file.
+- Use Scenario Outline with Examples table.
+- Make sure every step is relevant to the provided DOM.
+- Do not combine multiple actions into one step.
+- Use diversified realistic dataset (names, addresses, pin codes, mobile numbers).
+- Use dropdown values only from provided DOM.
+- Generate multiple scenarios if applicable.
+
+Context:
+DOM:
+\`\`\`html
+${domContext}
+\`\`\`
+
+Example:
+\`\`\`gherkin
+Feature: Login to Gmail
+
+Scenario Outline: Successful login with valid credentials
+  Given I open the login page
+  When I type "<username>" into the Username field
+  And I type "<password>" into the Password field
+  And I click the Login button
+  Then I should be logged in successfully
+
+Examples:
+  | username   | password  |
+  | "testuser" | "testpass"|
+  | "admin"    | "admin123"|
+\`\`\`
+
+Persona:
+- Audience: BDD testers who only need feature files.
+
+Output Format:
+- Only valid Gherkin in a \`\`\`gherkin\`\`\` block.
+
+Tone:
+- Clear, structured, executable.
+`;
+
+        const gherkinResponse = await fetch(config.url, {
+          method: 'POST',
+          headers: config.headers,
+          body: JSON.stringify({
+            model: config.model,
+            messages: [{
+              role: 'user',
+              content: gherkinPrompt
+            }],
+            temperature: 0.2
+          })
+        });
+
+        if (!gherkinResponse.ok) {
+          throw new Error(`Gherkin API failed: ${gherkinResponse.status} ${gherkinResponse.statusText}`);
+        }
+
+        const gherkinData = await gherkinResponse.json();
+        const gherkinMatch = gherkinData.choices[0].message.content.match(/```gherkin\n([\s\S]*?)```/);
+        gherkin = gherkinMatch ? gherkinMatch[1].trim() : gherkinData.choices[0].message.content;
+      }
+
+      // Generate step definitions if requested
+      if (generateStepDefs) {
+        const stepdefPrompt = `Instructions:
+Generate BOTH:
+1. A Cucumber .feature file.
+2. A Java step definition class for selenium.
+- Do NOT include Page Object code.
+- Step defs must include WebDriver setup, explicit waits, and actual Selenium code.
+- Use Scenario Outline with Examples table (diversified realistic data).
+
+Context:
+DOM:
+\`\`\`html
+${domContext}
+\`\`\`
+URL: ${pageUrl}
+
+Example:
+\`\`\`gherkin
+Feature: Login to Gmail
+
+Scenario Outline: Successful login with valid credentials
+  Given I open the login page
+  When I type "<username>" into the Username field
+  And I type "<password>" into the Password field
+  And I click the Login button
+  Then I should be logged in successfully
+
+Examples:
+  | username   | password  |
+  | "testuser" | "testpass"|
+  | "admin"    | "admin123"|
+\`\`\`
+
+\`\`\`java
+package com.gmail.stepdefs;
+
+import io.cucumber.java.en.*;
+import org.openqa.selenium.*;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.support.ui.*;
+
+public class LoginStepDefinitions {
+    private WebDriver driver;
+    private WebDriverWait wait;
+
+    @io.cucumber.java.Before
+    public void setUp() {
+        driver = new ChromeDriver();
+        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        driver.manage().window().maximize();
+    }
+
+    @io.cucumber.java.After
+    public void tearDown() {
+        if (driver != null) driver.quit();
+    }
+
+    @Given("I open the login page")
+    public void openLoginPage() {
+        driver.get("${pageUrl}");
+    }
+
+    @When("I type {string} into the Username field")
+    public void enterUsername(String username) {
+        WebElement el = wait.until(ExpectedConditions.elementToBeClickable(By.id("username")));
+        el.sendKeys(username);
+    }
+
+    @When("I type {string} into the Password field")
+    public void enterPassword(String password) {
+        WebElement el = wait.until(ExpectedConditions.elementToBeClickable(By.id("password")));
+        el.sendKeys(password);
+    }
+
+    @When("I click the Login button")
+    public void clickLogin() {
+        driver.findElement(By.xpath("//button[contains(text(),'Login')]")).click();
+    }
+
+    @Then("I should be logged in successfully")
+    public void verifyLogin() {
+        WebElement success = wait.until(ExpectedConditions.visibilityOfElementLocated(By.className("success")));
+        assert success.isDisplayed();
+    }
 }
+\`\`\`
+
+Persona:
+- Audience: QA engineers working with Cucumber & Selenium.
+
+Output Format:
+- Gherkin in \`\`\`gherkin\`\`\` block + Java code in \`\`\`java\`\`\` block.
+
+Tone:
+- Professional, executable, structured.
+`;
+
+        const stepdefResponse = await fetch(config.url, {
+          method: 'POST',
+          headers: config.headers,
+          body: JSON.stringify({
+            model: config.model,
+            messages: [{
+              role: 'user',
+              content: stepdefPrompt
+            }],
+            temperature: 0.2
+          })
+        });
+
+        if (!stepdefResponse.ok) {
+          throw new Error(`Step Definition API failed: ${stepdefResponse.status}`);
+        }
+
+        const stepdefData = await stepdefResponse.json();
+        const javaMatch = stepdefData.choices[0].message.content.match(/```java\n([\s\S]*?)```/);
+        const gherkinMatch = stepdefData.choices[0].message.content.match(/```gherkin\n([\s\S]*?)```/);
+        gherkin = gherkinMatch ? gherkinMatch[1].trim() : '';
+        stepDefinitions = javaMatch ? javaMatch[1].trim() : '';
+      }
+
+      // Generate POM if requested
+      if (generatePOM) {
+        const pomPrompt = `Instructions:
+Generate a Selenium Java Page Object Model class.
+- Add proper JavaDoc
+- Use FindBy annotations
+- Include meaningful method names
+- Add proper waits
+- Handle errors gracefully
+
+Context:
+URL: ${pageUrl}
+DOM: ${domContext}
+
+Output Format: Only Java code in a \`\`\`java\`\`\` block`;
+
+        const pomResponse = await fetch(config.url, {
+          method: 'POST',
+          headers: config.headers,
+          body: JSON.stringify({
+            model: config.model,
+            messages: [{
+              role: 'user',
+              content: pomPrompt
+            }],
+            temperature: 0.2
+          })
+        });
+
+        if (!pomResponse.ok) {
+          throw new Error(`POM API failed: ${pomResponse.status}`);
+        }
+
+        const pomData = await pomResponse.json();
+        const pomMatch = pomData.choices[0].message.content.match(/```java\n([\s\S]*?)```/);
+        pomCode = pomMatch ? pomMatch[1].trim() : '';
+      }
+
+      return {
+        gherkin,
+        stepDefinitions,
+        pom: pomCode
+      };
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
+    }
+  }
+});

@@ -116,6 +116,7 @@ function selectElement(e) {
   e.stopPropagation();
   
   const element = e.target;
+  const elementHtml = element.outerHTML;
   
   // Don't select the highlight overlay itself
   if (element === highlightOverlay) return;
@@ -128,7 +129,8 @@ function selectElement(e) {
     name: element.name || '',
     text: element.textContent.trim(),
     xpath: getXPath(element),
-    cssSelector: getCssSelector(element)
+    cssSelector: getCssSelector(element),
+    outerHTML: elementHtml  // Add outerHTML to the element info
   };
   
   // Create a persistent highlight for the selected element
@@ -141,7 +143,7 @@ function selectElement(e) {
   
   chrome.runtime.sendMessage({
     action: 'elementSelected',
-    element: elementInfo
+    element: elementInfo  // This now includes outerHTML
   });
   
   // Play a small animation to show the element was selected
