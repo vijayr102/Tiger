@@ -1,4 +1,6 @@
 let isInspectorActive = false;
+// Page context: store selected elements per page
+let pageContext = {};
 let selectedElements = [];
 let highlightOverlay = null;
 let currentHighlightedElement = null;
@@ -136,16 +138,20 @@ function selectElement(e) {
   // Create a persistent highlight for the selected element
   const selectedOverlay = createSelectedOverlay(element);
   
-  selectedElements.push({
+  // Get current page URL as key
+  const pageUrl = window.location.href;
+  if (!pageContext[pageUrl]) pageContext[pageUrl] = [];
+  pageContext[pageUrl].push({
     ...elementInfo,
     overlay: selectedOverlay
   });
-  
+
   chrome.runtime.sendMessage({
     action: 'elementSelected',
-    element: elementInfo  // This now includes outerHTML
+    element: elementInfo,
+    pageUrl: pageUrl
   });
-  
+
   // Play a small animation to show the element was selected
   selectedOverlay.style.transition = 'background-color 0.3s ease';
   selectedOverlay.style.backgroundColor = 'rgba(76, 175, 80, 0.4)';

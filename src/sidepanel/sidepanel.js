@@ -1,4 +1,6 @@
 // Initialize variables
+// Global DOM context: store elements per page
+let domContext = {};
 let selectedElements = [];
 let isInspecting = false;
 let pomCode = '';
@@ -10,12 +12,14 @@ document.addEventListener('DOMContentLoaded', async function() {
   const apiKeyInput = document.getElementById('apiKey');
   const apiProviderSelect = document.getElementById('apiProvider');
   const saveSettingsButton = document.getElementById('saveSettings');
-  const copyButton = document.getElementById('copyButton');
   const tabButtons = document.querySelectorAll('.tab-button');
   const gherkinCheck = document.getElementById('gherkinCheck');
   const stepdefCheck = document.getElementById('stepdefCheck');
   const pomCheck = document.getElementById('pomCheck');
   const codeOutput = document.getElementById('codeOutput');
+    const copyButton = document.getElementById('copyButton');
+    // Ensure codeOutput is relatively positioned for absolute icon
+    codeOutput.style.position = 'relative';
 
   // Verify all elements are found
   const requiredElements = {
@@ -42,10 +46,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     return;
   }
 
-  // Load saved settings
+  // Load saved settings and domContext
   chrome.storage.sync.get(['apiKey', 'apiProvider'], function(result) {
     if (result.apiKey) apiKeyInput.value = result.apiKey;
     if (result.apiProvider) apiProviderSelect.value = result.apiProvider;
+  });
+  chrome.storage.local.get(['domContext'], function(result) {
+    if (result.domContext) {
+      domContext = result.domContext;
+      updatePageDropdown();
+    }
+  });
+
+  window.addEventListener('beforeunload', function() {
+    chrome.storage.local.set({ domContext });
   });
 
   // Save settings
@@ -74,35 +88,53 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   });
 
+    // Copy to clipboard handler for icon
+    copyButton.addEventListener('click', function() {
+      const text = codeOutput.textContent || '';
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        copyButton.style.opacity = '1';
+        setTimeout(() => { copyButton.style.opacity = '0.7'; }, 800);
+      });
+    });
   // Toggle inspector
   inspectButton.addEventListener('click', async function() {
     try {
       isInspecting = !isInspecting;
       const tabs = await chrome.tabs.query({active: true, currentWindow: true});
-      
       if (tabs.length > 0) {
+        // Always attempt to inject the content script
         try {
           await chrome.scripting.executeScript({
             target: { tabId: tabs[0].id },
-            files: ['content.js']
+            files: ['src/content/content.js']
           });
         } catch (err) {
-          // Script might already be injected
+          // Script might already be injected, ignore
         }
-        
-        if (isInspecting) {
-          await chrome.tabs.sendMessage(tabs[0].id, {action: 'startInspector'});
-          inspectButton.textContent = 'Stop Inspector';
-          inspectButton.style.backgroundColor = '#ff4444';
-        } else {
-          await chrome.tabs.sendMessage(tabs[0].id, {action: 'stopInspector'});
-          inspectButton.textContent = 'Start Element Inspector';
-          inspectButton.style.backgroundColor = '#4CAF50';
-        }
+        // Try sending the message and handle connection errors
+        const action = isInspecting ? 'startInspector' : 'stopInspector';
+        chrome.tabs.sendMessage(tabs[0].id, {action}, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('Failed to toggle inspector:', chrome.runtime.lastError.message);
+            alert('Could not connect to the page. Please refresh the tab and try again.');
+            isInspecting = false;
+            inspectButton.textContent = 'Start Element Inspector';
+            inspectButton.style.backgroundColor = '#4CAF50';
+            return;
+          }
+          if (isInspecting) {
+            inspectButton.textContent = 'Stop Inspector';
+            inspectButton.style.backgroundColor = '#ff4444';
+          } else {
+            inspectButton.textContent = 'Start Element Inspector';
+            inspectButton.style.backgroundColor = '#4CAF50';
+          }
+        });
       }
     } catch (error) {
       console.error('Failed to toggle inspector:', error);
-      alert('Please refresh the page and try again.');
+      alert('Unexpected error occurred. Please refresh the tab and try again.');
       isInspecting = false;
       inspectButton.textContent = 'Start Element Inspector';
       inspectButton.style.backgroundColor = '#4CAF50';
@@ -120,12 +152,47 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   });
 
-  // Handle selected elements
+  // Handle selected elements per page
   chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     if (request.action === 'elementSelected') {
-      selectedElements.push(request.element);
+      const pageUrl = request.pageUrl || 'unknown';
+      if (!domContext[pageUrl]) domContext[pageUrl] = [];
+      domContext[pageUrl].push(request.element);
+      // If user is on this page, update selectedElements
+      if (window.location.href === pageUrl) {
+        selectedElements = domContext[pageUrl];
+      }
+      updatePageDropdown();
       updateGenerateButtonState();
     }
+  });
+
+  // UI: Add dropdown to select page context
+  const pageDropdown = document.createElement('select');
+  pageDropdown.id = 'pageDropdown';
+  pageDropdown.style.margin = '8px 0';
+  codeOutput.parentNode.insertBefore(pageDropdown, codeOutput);
+
+  function updatePageDropdown() {
+    const urls = Object.keys(domContext);
+    pageDropdown.innerHTML = '';
+    urls.forEach(url => {
+      const option = document.createElement('option');
+      option.value = url;
+      option.textContent = url;
+      pageDropdown.appendChild(option);
+    });
+    if (urls.length && !pageDropdown.value) {
+      pageDropdown.value = urls[0];
+    }
+    // Update selectedElements for current dropdown
+    selectedElements = domContext[pageDropdown.value] || [];
+    updateGenerateButtonState();
+  }
+
+  pageDropdown.addEventListener('change', () => {
+    selectedElements = domContext[pageDropdown.value] || [];
+    updateGenerateButtonState();
   });
 
   // Update generate button state
@@ -144,7 +211,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     if (selectedElements.length === 0) {
-      alert('Please select at least one element first!');
+      alert('Please select at least one element for the selected page!');
       return;
     }
 
@@ -157,8 +224,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     generateButton.disabled = true;
 
     try {
+      // Generate code for selected page only
       const response = await generateCode(selectedElements, apiKey, apiProvider);
-      
+
       if (!codeOutput) {
         throw new Error('Output element not found');
       }
@@ -168,10 +236,10 @@ document.addEventListener('DOMContentLoaded', async function() {
       codeOutput.dataset.pom = response.pom || '';
 
       updateOutputContent();
-      alert('Code generated successfully!');
+      console.log('Code generated successfully!');
     } catch (error) {
       console.error('Generation error:', error);
-      alert('Error generating code: ' + error.message);
+      console.log('Error generating code: ' + error.message);
     } finally {
       generateButton.textContent = 'Generate Code';
       generateButton.disabled = false;
@@ -535,4 +603,6 @@ Output Format: Only Java code in a \`\`\`java\`\`\` block`;
       throw error;
     }
   }
+
+  chrome.runtime.sendMessage({ action: "toggleInspector" }, function(response) { if (response.error) { console.error("Inspector error:", response.error); } else { console.log("Inspector response:", response.status); } });
 });

@@ -2,8 +2,10 @@
 <html>
 <head>
     <title>Gherkin Generator</title>
-    <link href="styles.css" rel="stylesheet">
-    <link href="prism.css" rel="stylesheet">
+    <link href="../styles/styles.css" rel="stylesheet">
+    <link href="../styles/prism.css" rel="stylesheet">
+    <script src="../lib/prism.js"></script>
+    <script src="sidepanel.js"></script>
 </head>
 <body>
     <div class="container">
@@ -14,9 +16,6 @@
 
         <!-- Generator Tab -->
         <div id="generatorTab" class="tab-content active">
-            <div class="action-buttons">
-                <button id="inspectButton" class="action-button">Start Element Inspector</button>
-            </div>
 
             <div class="output-options">
                 <label class="checkbox-container">
@@ -34,10 +33,14 @@
             </div>
 
             <div id="codeOutput" class="code-output active"></div>
-
+            <div class="copy-icon-container">
+                <button id="copyButton" class="copy-icon" title="Copy to Clipboard" style="background: transparent; border: none; position: absolute; right: 16px; bottom: 16px; opacity: 0.7; cursor: pointer;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+            </div>
             <div class="action-buttons bottom">
+                <button id="inspectButton" class="action-button">Start Element Inspector</button>
                 <button id="generateButton" class="action-button" disabled>Generate Code</button>
-                <button id="copyButton" class="action-button">Copy to Clipboard</button>
             </div>
         </div>
 
