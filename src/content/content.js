@@ -68,12 +68,24 @@ function createSelectedOverlay(element) {
   return selectedOverlay;
 }
 
+// Helper function to prevent default actions while inspector is active
+function preventDefaultActions(e) {
+  if (isInspectorActive) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+  }
+}
+
 function enableElementInspector() {
   createHighlightOverlay();
   document.addEventListener('mouseover', highlightElement, true);
   document.addEventListener('mouseout', removeHighlight, true);
   document.addEventListener('click', selectElement, true);
   document.addEventListener('keydown', handleKeyPress, true);
+  // Add event listeners to prevent all default actions while inspector is active
+  document.addEventListener('mousedown', preventDefaultActions, true);
+  document.addEventListener('mouseup', preventDefaultActions, true);
   document.body.style.cursor = 'crosshair';
 }
 
@@ -82,6 +94,9 @@ function disableElementInspector() {
   document.removeEventListener('mouseout', removeHighlight, true);
   document.removeEventListener('click', selectElement, true);
   document.removeEventListener('keydown', handleKeyPress, true);
+  // Remove event listeners for preventing default actions
+  document.removeEventListener('mousedown', preventDefaultActions, true);
+  document.removeEventListener('mouseup', preventDefaultActions, true);
   document.body.style.cursor = 'default';
   if (highlightOverlay) {
     highlightOverlay.remove();
@@ -101,6 +116,9 @@ function highlightElement(e) {
   e.preventDefault();
   e.stopPropagation();
   
+  // Prevent any default actions (clicks, navigation) while inspecting
+  e.stopImmediatePropagation();
+  
   currentHighlightedElement = e.target;
   updateHighlightPosition(currentHighlightedElement);
   highlightOverlay.style.display = 'block';
@@ -108,6 +126,9 @@ function highlightElement(e) {
 
 function removeHighlight(e) {
   if (!isInspectorActive || !highlightOverlay) return;
+  e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
   highlightOverlay.style.display = 'none';
   currentHighlightedElement = null;
 }
@@ -116,6 +137,8 @@ function selectElement(e) {
   if (!isInspectorActive) return;
   e.preventDefault();
   e.stopPropagation();
+  // Prevent any default actions or event bubbling
+  e.stopImmediatePropagation();
   
   const element = e.target;
   const elementHtml = element.outerHTML;

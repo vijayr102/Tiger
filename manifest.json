@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "CACIB Gherkin & Step Definition Generator",
+  "name": "Gherkin & Step Definition Generator",
   "version": "1.0",
   "description": "Generate Gherkin scenarios and Java step definitions for Selenium framework",
   "permissions": [
@@ -12,9 +12,9 @@
   ],
   "action": {
     "default_icon": {
-      "16": "images/Crédit_Agricole.png",
-      "48": "images/Crédit_Agricole.png",
-      "128": "images/Crédit_Agricole.png"
+      "16": "images/tiger.png",
+      "48": "images/tiger.png",
+      "128": "images/tiger.png"
     }
   },
   "side_panel": {
@@ -30,8 +30,8 @@
     "service_worker": "src/background/background.js"
   },
   "icons": {
-    "16": "images/Crédit_Agricole.png",
-    "48": "images/Crédit_Agricole.png",
-    "128": "images/Crédit_Agricole.png"
+    "16": "images/tiger.png",
+    "48": "images/tiger.png",
+    "128": "images/tiger.png"
   }
 }
