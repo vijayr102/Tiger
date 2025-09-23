@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (err) {
           // Script might already be injected, ignore
         }
-        // Try sending the message and handle connection errors
+        // Only send start/stopInspector, never redirect or reload
         const action = isInspecting ? 'startInspector' : 'stopInspector';
         chrome.tabs.sendMessage(tabs[0].id, {action}, (response) => {
           if (chrome.runtime.lastError) {
@@ -326,15 +326,22 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   async function generateCode(elements, apiKey, apiProvider) {
+    // Always use the first key in domContext (first page in dropdown) for driver.get
     let pageUrl = '';
-    try {
-      const tabs = await chrome.tabs.query({active: true, currentWindow: true});
-      pageUrl = tabs[0].url;
-    } catch (error) {
-      console.error('Failed to get page URL:', error);
+    const urls = Object.keys(domContext);
+    if (urls.length > 0) {
+      pageUrl = urls[0];
+    } else {
+      try {
+        const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+        pageUrl = tabs[0].url;
+      } catch (error) {
+        console.error('Failed to get page URL:', error);
+      }
     }
 
-    const domContext = JSON.stringify(elements, null, 2);
+    // Use a different variable name to avoid shadowing global domContext
+    const domContextString = JSON.stringify(elements, null, 2);
 
     const apiConfig = {
       openai: {
@@ -381,7 +388,7 @@ Instructions:
 Context:
 DOM:
 \`\`\`html
-${domContext}
+${domContextString}
 \`\`\`
 
 Example:
@@ -446,7 +453,7 @@ Generate BOTH:
 Context:
 DOM:
 \`\`\`html
-${domContext}
+${domContextString}
 \`\`\`
 URL: ${pageUrl}
 
@@ -567,7 +574,7 @@ Generate a Selenium Java Page Object Model class.
 
 Context:
 URL: ${pageUrl}
-DOM: ${domContext}
+DOM: ${domContextString}
 
 Output Format: Only Java code in a \`\`\`java\`\`\` block`;
 
