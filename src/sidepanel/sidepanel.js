@@ -6,6 +6,84 @@ let isInspecting = false;
 let pomCode = '';
 
 document.addEventListener('DOMContentLoaded', async function() {
+  // Multi-page selection and ordering
+  const pageMultiSelect = document.getElementById('pageMultiSelect');
+  const pageOrderControls = document.getElementById('pageOrderControls');
+  let selectedPageOrder = [];
+
+  function renderPageMultiSelect() {
+    pageMultiSelect.innerHTML = '';
+    const urls = Object.keys(domContext);
+    urls.forEach(url => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'page-multiselect-item';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = url;
+      checkbox.checked = selectedPageOrder.includes(url);
+      checkbox.addEventListener('change', function() {
+        if (checkbox.checked) {
+          if (!selectedPageOrder.includes(url)) selectedPageOrder.push(url);
+        } else {
+          selectedPageOrder = selectedPageOrder.filter(u => u !== url);
+        }
+        renderPageOrderControls();
+      });
+      const label = document.createElement('span');
+      label.textContent = url;
+      wrapper.appendChild(checkbox);
+      wrapper.appendChild(label);
+      pageMultiSelect.appendChild(wrapper);
+    });
+    renderPageOrderControls();
+  }
+
+  function renderPageOrderControls() {
+    pageOrderControls.innerHTML = '';
+    selectedPageOrder.forEach((url, idx) => {
+      const item = document.createElement('div');
+      item.className = 'page-order-item';
+      item.textContent = `${idx === 0 ? 'Start Page' : 'Next Page ' + idx}: ${url}`;
+      // Up button
+      if (idx > 0) {
+        const upBtn = document.createElement('button');
+        upBtn.textContent = '↑';
+        upBtn.title = 'Move up';
+        upBtn.onclick = () => {
+          [selectedPageOrder[idx-1], selectedPageOrder[idx]] = [selectedPageOrder[idx], selectedPageOrder[idx-1]];
+          renderPageOrderControls();
+        };
+        item.appendChild(upBtn);
+      }
+      // Down button
+      if (idx < selectedPageOrder.length - 1) {
+        const downBtn = document.createElement('button');
+        downBtn.textContent = '↓';
+        downBtn.title = 'Move down';
+        downBtn.onclick = () => {
+          [selectedPageOrder[idx+1], selectedPageOrder[idx]] = [selectedPageOrder[idx], selectedPageOrder[idx+1]];
+          renderPageOrderControls();
+        };
+        item.appendChild(downBtn);
+      }
+      // Remove button
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = '✕';
+      removeBtn.title = 'Remove page';
+      removeBtn.onclick = () => {
+        selectedPageOrder = selectedPageOrder.filter(u => u !== url);
+        renderPageMultiSelect();
+      };
+      item.appendChild(removeBtn);
+      pageOrderControls.appendChild(item);
+    });
+  }
+
+  // Call this whenever domContext changes
+  function updateMultiPageUI() {
+    renderPageMultiSelect();
+    renderPageOrderControls();
+  }
   // Initialize UI elements
   const inspectButton = document.getElementById('inspectButton');
   const generateButton = document.getElementById('generateButton');
@@ -55,6 +133,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (result.domContext) {
       domContext = result.domContext;
       updatePageDropdown();
+      updateMultiPageUI();
+    } else {
+      updateMultiPageUI();
     }
   });
 
@@ -164,6 +245,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
       updatePageDropdown();
       updateGenerateButtonState();
+      updateMultiPageUI();
     }
   });
 
@@ -215,6 +297,12 @@ document.addEventListener('DOMContentLoaded', async function() {
       return;
     }
 
+    // Gather all selected pages' DOM elements in order
+    const multiPageContext = selectedPageOrder.map((url, idx) => ({
+      url,
+      elements: domContext[url] || []
+    }));
+
     if (!['openai', 'groq'].includes(apiProvider)) {
       alert('Please select a valid API provider (OpenAI or Groq)');
       return;
@@ -224,8 +312,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     generateButton.disabled = true;
 
     try {
-      // Generate code for selected page only
-      const response = await generateCode(selectedElements, apiKey, apiProvider);
+  // Generate code for all selected pages in order
+  const response = await generateCode(multiPageContext, apiKey, apiProvider);
 
       if (!codeOutput) {
         throw new Error('Output element not found');
@@ -334,7 +422,14 @@ document.addEventListener('DOMContentLoaded', async function() {
       console.error('Failed to get page URL:', error);
     }
 
-    const domContext = JSON.stringify(elements, null, 2);
+    // Accept multi-page context: elements is now an array of {url, elements}
+    // If elements is not an array, fallback to old behavior
+    let multiPageContext = Array.isArray(elements) ? elements : [{ url: '', elements }];
+
+    // Build a combined DOM context string for all selected pages
+    let domContextString = multiPageContext.map((page, idx) => {
+      return `Page ${idx+1} URL: ${page.url}\nDOM:\n${JSON.stringify(page.elements, null, 2)}`;
+    }).join('\n\n');
 
     const apiConfig = {
       openai: {
@@ -372,18 +467,15 @@ document.addEventListener('DOMContentLoaded', async function() {
 Instructions:
 - Generate ONLY a Cucumber (.feature) file.
 - Use Scenario Outline with Examples table.
-- Make sure every step is relevant to the provided DOM.
+- Make sure every step is relevant to the provided DOM(s).
 - Do not combine multiple actions into one step.
 - Use diversified realistic dataset (names, addresses, pin codes, mobile numbers).
-- Use dropdown values only from provided DOM.
+- Use dropdown values only from provided DOM(s).
 - Generate multiple scenarios if applicable.
+- If multiple pages are provided, treat the first as the start page and subsequent as navigation steps.
 
 Context:
-DOM:
-\`\`\`html
-${domContext}
-\`\`\`
-
+${domContextString}
 Example:
 \`\`\`gherkin
 Feature: Login to Gmail
@@ -434,8 +526,8 @@ Tone:
       }
 
       // Generate step definitions if requested
-      if (generateStepDefs) {
-        const stepdefPrompt = `Instructions:
+    if (generateStepDefs) {
+    const stepdefPrompt = `Instructions:
 Generate BOTH:
 1. A Cucumber .feature file.
 2. A Java step definition class for selenium.
@@ -444,11 +536,9 @@ Generate BOTH:
 - Use Scenario Outline with Examples table (diversified realistic data).
 
 Context:
-DOM:
-\`\`\`html
-${domContext}
-\`\`\`
-URL: ${pageUrl}
+${domContextString}
+Page URLs (in order):
+${multiPageContext.map((p, i) => `Page ${i+1}: ${p.url}`).join('\n')}
 
 Example:
 \`\`\`gherkin
@@ -558,18 +648,21 @@ Tone:
       // Generate POM if requested
       if (generatePOM) {
         const pomPrompt = `Instructions:
-Generate a Selenium Java Page Object Model class.
-- Add proper JavaDoc
-- Use FindBy annotations
-- Include meaningful method names
-- Add proper waits
-- Handle errors gracefully
+        Generate a Selenium Java Page Object Model class for each page in the flow.
+        - Add proper JavaDoc
+        - Use FindBy annotations
+        - Include meaningful method names
+        - Add proper waits
+        - Handle errors gracefully
+        - If multiple pages are provided, generate a separate Page Object class for each, named according to the page order (e.g., StartPage, NextPage1, etc.).
 
 Context:
-URL: ${pageUrl}
-DOM: ${domContext}
+${domContextString}
 
-Output Format: Only Java code in a \`\`\`java\`\`\` block`;
+Page URLs (in order):
+${multiPageContext.map((p, i) => `Page ${i+1}: ${p.url}`).join('\n')}
+
+Output Format: Only Java code in a \`\`\`java\`\`\` block, with each class separated by a comment line. Example: // --- Page 1 ---\n`;
 
         const pomResponse = await fetch(config.url, {
           method: 'POST',
