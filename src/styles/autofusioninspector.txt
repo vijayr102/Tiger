@@ -1,0 +1,88 @@
+Build me a model context protocol with spring-ai-starter-mcp-server and spring-ai-starter-mcp-server-webmvc in java 17
+
+Tools:
+
+Launch browser and Navigate to url provided using the selenium web drivers chrome->chromedriver.exe path from app.props
+and inject the java script to the browser
+
+The javascript code:
+This should a ribbon in green color and its title is AutoFusionInspector,
+has button start inspector(toggle)/stop inspector,sync and generate,
+has checkboxes 1.Feature,2.Step Definition and 3.Page
+When use clicks the start inspector, the user is going to select elements(dom elements visible in viewport)
+in the webpage currently in the browser highlight the elements selected by the user and store in hashmap equivalent in ui like url as key and elements as value to it, Also when user selects by click button or link text or any element that triggers redirect that events alone should be disable so that no redirect happens when the inspector is started.
+Stop inspector -redirects through all elements are enabled and all the highlights are removed.
+User clicks on sync send the url and elements map to mcp server- also run a scroll inside a portion in ribbon to sync elements once elements
+of this page is selected.After stop inspector, User can now  move to different page through redirect but the ribbon created to script injection should persist. the cycle continues like the user selects the element in new page and syncs to the mcp server.
+Then user enables and disbales the checkboxes  1.Feature,2.Step Definition and 3.Page and clicks generate.
+Then the respective file 1.Feature,2.Step Definition and 3.Page prompts must be generated in the workspeace by the vscode copilot
+
+Here’s a **clear, structured rewrite** of your requirement that makes it easier to understand and implement while keeping all the technical details intact:
+
+---
+
+## Requirement: Model Context Protocol with Spring AI MCP Server
+
+### Environment
+- **Java Version**: 17  
+- **Dependencies**:  
+  - `spring-ai-starter-mcp-server`  
+  - `spring-ai-starter-mcp-server-webmvc`  
+
+---
+
+### Tools & Workflow
+
+1. **Browser Automation**
+   - Use **Selenium WebDriver** with Chrome (`chromedriver.exe` path configured in `app.props`).
+   - Launch the browser and navigate to the provided URL.
+   - Inject custom JavaScript into the browser session.
+   - browser session should be maintained with session id.(session management)
+
+2. **Injected JavaScript UI**
+   - Create a **green ribbon** titled **AutoFusionInspector**.
+   - Ribbon contains:
+     - Buttons:  
+       - **Start Inspector (toggle)**  
+       - **Stop Inspector**  
+       - **Sync**  
+       - **Generate**
+     - Checkboxes:  
+       1. Feature  
+       2. Step Definition  
+       3. Page  
+
+3. **Inspector Behavior**
+   - **Start Inspector**:
+     - User can select DOM elements visible in the viewport.
+     - Selected elements are highlighted.
+     - Store selections in a **HashMap**:  
+       - Key = current page URL  
+       - Value = list of selected elements
+     - Disable redirect-triggering events (e.g., clicks on links or buttons) while inspector is active.
+   - **Stop Inspector**:
+     - Re-enable all redirects.
+     - Remove all highlights from selected elements.
+
+4. **Sync Functionality**
+   - On **Sync**, send the URL and element map to the MCP server.
+   - Ribbon should include a scrollable section to display message to user to sync the selected elements.
+   - After stopping the inspector, user can navigate to a new page.  
+     - The ribbon persists across pages.  
+     - Cycle continues: user selects elements → syncs to MCP server.
+
+5. **Generate Functionality**
+   - User toggles checkboxes (Feature, Step Definition, Page).
+   - On **Generate**, the ***prompt to generate respective files*** are created in the workspace by **VS Code Copilot**:
+     - `Feature` file  
+     - `Step Definition` file  
+     - `Page` file  
+
+---
+
+### Summary
+This setup enables a **persistent inspector ribbon** injected into the browser, allowing users to select and sync DOM elements across multiple pages. The selections are mapped per URL, synced to the MCP server, and used to generate structured files prompt (`Feature`, `Step Definition`, `Page`) in the VS Code workspace.
+
+
+
+
