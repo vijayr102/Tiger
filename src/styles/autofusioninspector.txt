@@ -84,5 +84,76 @@ Here’s a **clear, structured rewrite** of your requirement that makes it easie
 This setup enables a **persistent inspector ribbon** injected into the browser, allowing users to select and sync DOM elements across multiple pages. The selections are mapped per URL, synced to the MCP server, and used to generate structured files prompt (`Feature`, `Step Definition`, `Page`) in the VS Code workspace.
 
 
+Architecting an Enterprise Intelligent mcp based Web UI automation Test code generator
+
+You are an AI assistant acting as a Senior System Architect.
+
+I want to design and implement an Enterprise-grade Intelligent mcp based Web UI automation Test code generator that can:
+
+1. **Browser Automation**
+   - Use **Selenium WebDriver** with Chrome (`chromedriver.exe` path configured in `app.props`).
+   - Launch the browser and navigate to the provided URL.
+   - Inject custom JavaScript into the browser session.
+   - browser session should be maintained with session id.(session management)
+
+2. **Injected JavaScript UI**
+   - Create a **green ribbon** titled **AutoFusionInspector**.
+   - Ribbon contains:
+     - Buttons:  
+       - **Start Inspector (toggle)**  
+       - **Stop Inspector**  
+       - **Sync**  
+       - **Generate**
+     - Checkboxes:  
+       1. Feature  
+       2. Step Definition  
+       3. Page  
+
+3. **Inspector Behavior**
+   - **Start Inspector**:
+     - User can select DOM elements visible in the viewport.
+     - Selected elements are highlighted.
+     - Store selections in a **HashMap**:  
+       - Key = current page URL  
+       - Value = list of selected elements
+     - Disable redirect-triggering events (e.g., clicks on links or buttons) while inspector is active.
+   - **Stop Inspector**:
+     - Re-enable all redirects.
+     - Remove all highlights from selected elements.
+
+4. **Sync Functionality**
+   - On **Sync**, send the URL and element map to the MCP server.
+   - Ribbon should include a scrollable section to display message to user to sync the selected elements.
+   - After stopping the inspector, user can navigate to a new page.  
+     - The ribbon persists across pages.  
+     - Cycle continues: user selects elements → syncs to MCP server.
+
+5. **Generate Functionality**
+   - User toggles checkboxes (Feature, Step Definition, Page).
+   - On **Generate**, the ***prompt to generate respective files*** are created in the workspace by **VS Code Copilot**:
+     - `Feature` file  
+     - `Step Definition` file  
+     - `Page` file 
+	 
+Tech constraints / goals:
+
+MCP Design First
+
+Use spring boot from java 17
+ 
+Input is always a browser url, selected dom elements
+
+How you must behave
+
+Ask me 15–20 questions, one at a time.
+
+Each question must be multiple-choice (A/B/C/D)
+
+Options should be realistic architectural choices (e.g., storage strategy, execution engine, environment management, test generation strategy, MCP tool design, etc.)
+
+Do NOT list all questions at once.
+
+
+
 
 
